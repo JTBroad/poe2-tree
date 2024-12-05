@@ -1,0 +1,32 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    # Runs every hour
+    - cron: "0 * * * *"
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the fork
+        uses: actions/checkout@v3
+        with:
+          ref: main # Replace with your default branch if it's not 'main'
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add Upstream Repo
+        run: |
+          git remote add upstream https://github.com/marcoaaguiar/poe2-tree.git
+          git fetch upstream
+          git merge upstream/main -m "Merge upstream changes" || true # Replace 'main' with the upstream branch name
+
+      - name: Push changes to fork
+        run: |
+          git push origin main # Replace 'main' with your branch name
