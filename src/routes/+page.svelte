@@ -8,6 +8,7 @@
 	import TreeNode from '$lib/components/ui/tree-node/tree-node.svelte';
 	import NodeListItem from '$lib/components/ui/node-list-item/node-list-item.svelte';
 	import LZString from 'lz-string';
+	import { SaveAndLoadModal } from '$lib/components/save-and-load';
 
 	let { nodes } = loadData();
 
@@ -56,8 +57,11 @@
 	let hideUnselected = false;
 	let hideSmall = false;
 
+	// State for Regex Search toggle
+	let isRegexSearch = false;
+
 	// Reactive statement for search
-	$: handleSearch(searchTerm);
+	$: handleSearch(searchTerm, isRegexSearch);
 
 	if (browser) {
 		const params = new URLSearchParams(window.location.search);
@@ -337,7 +341,7 @@
 		}
 	}
 
-	function handleSearch(text: string) {
+	function handleSearch(text: string, regexMode: boolean) {
 		if (!text) {
 			searchResults = [];
 			return;
@@ -345,14 +349,31 @@
 
 		const search = text.toLowerCase();
 
-		searchResults = Object.entries(nodes)
-			.filter(
-				([_, values]) =>
-					values.id.includes(search) ||
-					values.name.toLowerCase().includes(search) ||
-					values.description.some((value) => value.toLowerCase().includes(search))
-			)
-			.map(([key, _]) => key);
+		if (regexMode) {
+			try {
+				const regex = new RegExp(search);
+				searchResults = Object.entries(nodes)
+					.filter(
+						([_, values]) =>
+							regex.test(values.id) ||
+							regex.test(values.name.toLowerCase()) ||
+							values.description.some((value) => regex.test(value.toLowerCase()))
+					)
+					.map(([key, _]) => key);
+			} catch (error) {
+				console.error('Invalid regular expression:', error);
+				searchResults = [];
+			}
+		} else {
+			searchResults = Object.entries(nodes)
+				.filter(
+					([_, values]) =>
+						values.id.includes(search) ||
+						values.name.toLowerCase().includes(search) ||
+						values.description.some((value) => value.toLowerCase().includes(search))
+				)
+				.map(([key, _]) => key);
+		}
 	}
 
 	function clampPanOffsets() {
@@ -562,9 +583,17 @@
 				</div>
 				<!-- Search -->
 				<div class="min-h-0 grid grid-cols-1 grid-rows-[auto_auto_auto_1fr]">
-					<b class="block underline underline-offset-2">Search:</b>
+					<!-- Search and Regex Toggle Container -->
+					<div class="flex justify-between items-center">
+						<b class="block underline underline-offset-2">Search:</b>
+						<!-- Regex Search Checkbox -->
+						<label class="whitespace-nowrap flex items-center">
+							<input type="checkbox" bind:checked={isRegexSearch} />
+							<span class="ml-2">Regex Mode</span>
+						</label>
+					</div>
 					<!-- Search Input Container -->
-					<div class="relative inline-block">
+					<div class="relative inline-block mt-2">
 						<input
 							class="block w-full rounded px-2 pr-10 text-black"
 							type="text"
@@ -751,4 +780,6 @@
 			</div>
 		</div>
 	</div>
+
+	<SaveAndLoadModal />
 </div>
